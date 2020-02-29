@@ -6,6 +6,7 @@ Flask-Migrate
 Flask-RESTful
 Flask-Script
 Flask-SQLAlchemy
+Flask-Admin
 Jinja2
 six
 SQLAlchemy
@@ -16,3 +17,5 @@ ipython
 ipdb
 pysnooper
 requests
+coverage
+prospector
