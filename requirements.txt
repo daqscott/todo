@@ -14,6 +14,7 @@ Flask-Foundation
 Flask-Login
 Flask-Session
 Flask-WTF
+Flask-CLI
 Jinja2
 six
 SQLAlchemy

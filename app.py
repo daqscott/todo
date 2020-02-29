@@ -8,6 +8,7 @@ from flask_admin import Admin
 from flask_sqlalchemy import SQLAlchemy
 from flask_session import Session
 from flask_admin.contrib.sqla import ModelView
+from flask_assets import Environment
 
 # from api import api
 # from database import migrate
@@ -39,6 +40,7 @@ def create_app(config_file=None, settings_override=None):
     with app.app_context():
         db.create_all()
     s = db.session
+    assets_env = Environment(app)
 
     app.config["FLASK_ADMIN_SWATCH"] = "cerulean"
     admin = Admin(app, name="foo", template_mode="bootstrap3")

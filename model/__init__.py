@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime
 
-from flask.ext.migrate import Migrate
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
