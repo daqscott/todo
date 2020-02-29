@@ -29,6 +29,7 @@ def get_datetime_column(*args, default_now=False):
 
 
 class BaseModel:
+    """ Base model defines some useful representations """
     def __repr__(self):  # FIXME: unit test
         ret = f"<{self.__class__.__name__}"
         if hasattr(self, "name"):
@@ -41,7 +42,7 @@ class BaseModel:
     def __str__(self):
         if hasattr(self, "name"):
             return self.name
-        return super.__str__(self)
+        return super().__str__(self)
 
 
 class User(db.Model, BaseModel):

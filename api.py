@@ -31,14 +31,14 @@ class DocumentsResource(Resource):
             return self.get_one(document_id)
         return self.get_list()
 
-    def get_one(self, document_id):
-        document = Document.query.get(document_id)
-        return document.as_dict()
+    # def get_one(self, document_id):
+    #     document = Document.query.get(document_id)
+    #     return document.as_dict()
 
-    def get_list(self):
-        query = self.paginate(Document.query)
-        documents = [row.as_dict() for row in query]
-        return documents
+    # def get_list(self):
+    #     query = self.paginate(Document.query)
+    #     documents = [row.as_dict() for row in query]
+    #     return documents
 
     def paginate(self, query):
         offset = int(request.args.get('start', 0))
