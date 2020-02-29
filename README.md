@@ -1,2 +1,3 @@
-# todo
-my tiny todo tracker
+ToDo App
+========
+  * my tiny todo tracker
