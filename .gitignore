@@ -40,3 +40,5 @@ appname/static/public/*
 .idea
 .mypy_cache
 flask_session
+alembic
+alembic.ini

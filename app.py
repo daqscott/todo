@@ -8,7 +8,6 @@ from flask_admin import Admin
 from flask_sqlalchemy import SQLAlchemy
 from flask_session import Session
 from flask_admin.contrib.sqla import ModelView
-from flask_assets import Environment
 
 # from api import api
 # from database import migrate
@@ -22,9 +21,6 @@ os.environ.setdefault(config_variable_name, default_config_path)
 def create_app(config_file=None, settings_override=None):
     app = Flask(__name__)
     sess = Session()
-
-    # app.config["SESSION_TYPE"] = "filesystem"
-    # app.config["SECRET_KEY"] = "fuck_off_and_die_lksjdflkjsdf0982w34098324"
 
     if config_file:
         app.config.from_pyfile(config_file)
@@ -40,7 +36,6 @@ def create_app(config_file=None, settings_override=None):
     with app.app_context():
         db.create_all()
     s = db.session
-    assets_env = Environment(app)
 
     app.config["FLASK_ADMIN_SWATCH"] = "cerulean"
     admin = Admin(app, name="foo", template_mode="bootstrap3")

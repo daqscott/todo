@@ -7,7 +7,6 @@ Flask-RESTful
 Flask-Script
 Flask-SQLAlchemy
 Flask-Admin
-Flask-Assets
 Flask-Cache
 Flask-DebugToolbar
 Flask-Foundation
