@@ -6,6 +6,14 @@ Flask-Migrate
 Flask-RESTful
 Flask-Script
 Flask-SQLAlchemy
+Flask-Admin
+Flask-Cache
+Flask-DebugToolbar
+Flask-Foundation
+Flask-Login
+Flask-Session
+Flask-WTF
+Flask-CLI
 Jinja2
 six
 SQLAlchemy
@@ -15,4 +23,10 @@ pytest
 ipython
 ipdb
 pysnooper
+requests
+coverage
+prospector
+mypy
+mypy-extensions
+typing-extensions
 requests

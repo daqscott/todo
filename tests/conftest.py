@@ -1,7 +1,7 @@
 import pytest
 
 from app import create_app
-from database import db as _db
+from app import db as _db
 from tests.client import ApiTestingResponse
 
 

@@ -22,9 +22,6 @@ def create_app(config_file=None, settings_override=None):
     app = Flask(__name__)
     sess = Session()
 
-    # app.config["SESSION_TYPE"] = "filesystem"
-    # app.config["SECRET_KEY"] = "fuck_off_and_die_lksjdflkjsdf0982w34098324"
-
     if config_file:
         app.config.from_pyfile(config_file)
     else:
