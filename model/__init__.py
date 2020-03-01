@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
+from datetime import date, datetime
 
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref, relationship
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Time
 
 if 'db' not in locals() or 'db' not in globals():
     db = SQLAlchemy()
@@ -14,18 +14,30 @@ DATE_FORMAT = "%Y-%m-%d"
 migrate = Migrate()
 
 
-def get_id_column():
+def get_id_column() -> Column:
     return Column(Integer(), primary_key=True)
 
 
-def get_name_column(length=32):
+def get_name_column(length=64) -> Column:
     return Column(String(length), unique=True, nullable=False)
 
 
-def get_datetime_column(*args, default_now=False):
+def get_datetime_column(*args, default_now=False) -> Column:
     if default_now:
-        return Column(DateTime(), default=datetime.now(), *args)
+        return Column(DateTime(), default=datetime.now(), nullable=False, *args)
     return Column(DateTime(), *args)
+
+
+def get_date_column(*args, default_now=False) -> Column:
+    if default_now:
+        return Column(Date(), default=date.today(), nullable=False, *args)
+    return Column(Date(), *args)
+
+
+def get_time_column(*args, default_now=False) -> Column:
+    if default_now:
+        return Column(Time(), default=datetime.now().time(), nullable=False, *args)
+    return Column(Time(), *args)
 
 
 class BaseModel:
@@ -49,7 +61,7 @@ class User(db.Model, BaseModel):
     """ The actor in our system. Can own task lists, create projects, and work on work days """
     user_id = get_id_column()
     name = get_name_column()
-    creation_date = get_datetime_column(default_now=True)  # FIXME: make date
+    creation_date = get_date_column(default_now=True)
 
 
 class Project(db.Model, BaseModel):
@@ -61,9 +73,9 @@ class Project(db.Model, BaseModel):
     description = Column(String())
     user_id = Column(Integer(), ForeignKey("user.user_id"))
     git_branch = Column(String(128))
-    creation_date = get_datetime_column(default_now=True)  # FIXME: make all these datetimes to date
-    start_date = get_datetime_column()
-    end_date = get_datetime_column()
+    creation_date = get_date_column(default_now=True)
+    start_date = get_date_column()
+    end_date = get_date_column()
     creator = relationship("User", backref="projects")
     tasks = relationship("Task", backref="project")
     # If this was truly multi user we might have a property for all users assigned to this project
@@ -74,9 +86,9 @@ class WorkDay(db.Model, BaseModel):
     # TODO: describe columns
     """
     work_day_id = get_id_column()
-    # TODO: add date, make start_time, end_time time
-    start_time = get_datetime_column(default_now=True)
-    end_time = get_datetime_column()  # FIXME: make a constraint that guarantees this is on the same date as start time
+    day = get_date_column(default_now=True)
+    start_time = get_time_column(default_now=True)
+    end_time = get_time_column()
     user_id = Column(Integer(), ForeignKey("user.user_id"))
     user = relationship("User", backref="work_days")
     tasks = relationship("Task", secondary="work_day_task", backref="work_days")
@@ -99,7 +111,7 @@ class TodoList(db.Model, BaseModel):
     todo_list_id = get_id_column()
     name = get_name_column()
     user_id = Column(Integer(), ForeignKey("user.user_id"))
-    creation_date = get_datetime_column(default_now=True)  # FIXME: make date
+    creation_date = get_date_column(default_now=True)
     user = relationship("User", backref="user")
     tasks = relationship("Task", backref="todo_list")  # For now a task can only appear on one Todo list
 
@@ -118,9 +130,9 @@ class Task(db.Model, BaseModel):
     parent_task = relationship("Task", remote_side=[task_id])
     project_id = Column(Integer(), ForeignKey("project.project_id"))  # tasks can only be assigned to one project
     todo_list_id = Column(Integer(), ForeignKey("todo_list.todo_list_id"))  # for now tasks can only be on one todo list
-    creation_date = get_datetime_column(default_now=True)  # FIXME: REMOVE
-    start_date = get_datetime_column()  # FIXME: make date
-    end_date = get_datetime_column()  # FIXME: make data
+    creation_date = get_date_column(default_now=True)
+    start_date = get_date_column()
+    end_date = get_date_column()
     git_branch = Column(String(128))
 
 
@@ -128,3 +140,6 @@ class WorkDayTask(db.Model):
     work_day_id = Column(Integer, ForeignKey("work_day.work_day_id"), primary_key=True)
     task_id = Column(Integer, ForeignKey("task.task_id"), primary_key=True)
     task = relationship("Task")
+
+# TODO: add indexes on all foreign keys, create unique constraint on date column of workday/user,
+#  unique constraint on all name columns, add to get_name_column
