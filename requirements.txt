@@ -30,3 +30,4 @@ mypy
 mypy-extensions
 typing-extensions
 requests
+dataclass-csv

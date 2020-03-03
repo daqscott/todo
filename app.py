@@ -11,7 +11,7 @@ from flask_admin.contrib.sqla import ModelView
 
 # from api import api
 # from database import migrate
-from model import User, Task, Project, WorkDay, TodoList
+from model import User, Task, Project, WorkDay, TodoList, Expense
 
 config_variable_name = 'FLASK_CONFIG_PATH'
 default_config_path = os.path.join(os.path.dirname(__file__), 'config/local.py')

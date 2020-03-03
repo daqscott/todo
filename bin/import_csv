@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+import re
+import os
+import sys
+
+from decimal import Decimal, getcontext
+from datetime import datetime
+from dataclasses import dataclass
+from dataclass_csv import DataclassReader
+
+PATH = os.path.dirname(os.path.abspath(__file__))
+my_dir = os.path.join(PATH, "..")
+sys.path.append(my_dir)
+
+from app import app, db
+from model import *
+
+getcontext().prec = 2
+
+
+@dataclass
+class Info:
+    subcategory: str
+    vendor: str
+
+
+# FIXME: make this a tuple of subcategory, vendor
+r_dict = {re.compile(r".+jason*", re.IGNORECASE): Info(vendor="jason", subcategory="psych"),
+          re.compile(r"amzn*"): Info(vendor="amazon", subcategory="amazon"),
+          re.compile(r"amazon*"): Info(vendor="amazon", subcategory="amazon"),
+          re.compile(r"kindle*"): Info(vendor="amazon", subcategory="books"),
+          re.compile(r"prime video*"): Info(vendor="amazon", subcategory="video"),
+          re.compile(r"wholefds"): Info(vendor="amazon", subcategory="amazon"),
+          re.compile(r"netflix"): Info(vendor="netflix", subcategory="video"),
+          re.compile(r"uber*"): Info(vendor="uber", subcategory="taxi"),
+          re.compile(r"phillip rocke*"): Info(subcategory="vape", vendor="gemini"),
+          re.compile(r"metrocard*"): Info(subcategory="metrocard", vendor="metrocard"),
+          re.compile(r".+grossman*"): Info(vendor="grossman", subcategory="psych"),
+          re.compile(r".dellapietras"): Info(subcategory="butcher", vendor="dellapietras"),
+          re.compile(r"sweetgreen*"): Info(vendor="sweetgreen", subcategory="lunch"),
+          re.compile(r"goldman*"): Info(vendor="GS", subcategory="lunch"),
+          re.compile(r"key*"): Info(vendor="key food", subcategory="food"),
+          re.compile(r"cvs*"): Info(vendor="cvs", subcategory="psych"),
+          re.compile(r"cleaners*"): Info(vendor="montague cleaners", subcategory="laundry"),
+          re.compile(r"starbucks"): Info(vendor="starbucks", subcategory="coffee")
+          }
+
+@dataclass
+class Row:
+    date: str
+    description: str
+    category: str
+    amount: Decimal
+
+
+def read_file(file_name: str) -> None:
+    s = db.session
+    with open(file_name) as csv, app.app_context():
+        reader = DataclassReader(csv, Row)
+        for row in reader:
+            dt = datetime.strptime(row.date, "%m/%d/%Y")
+            info = get_info(row.description.lower())
+            tmp = Expense(datetime=dt,
+                          month=dt.month,
+                          year=dt.year,
+                          description=row.description.lower(),
+                          category=row.category.lower(),
+                          subcategory=info.subcategory,
+                          vendor=info.vendor,
+                          amount=abs(round(row.amount))
+                          )
+            db.session.add(tmp)
+        db.session.commit()
+
+
+def get_info(s: str) -> str:
+    # "uber", "sweetgreen", "vape", "metrocard", "jason", "grossman", "drugs", "butcher", "burger", "GS cafe", "laundry"
+    for expression, info in r_dict.items():
+        if expression.match(s):
+            print(f"Found it in {s}")
+            return info
+    return Info(subcategory="none", vendor="none")
+
+
+def main():
+    db.create_all(app=app)
+    file_name = sys.argv[1]
+    read_file(file_name)
+
+
+if __name__ == "__main__":
+    main()
