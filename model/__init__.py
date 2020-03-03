@@ -4,7 +4,7 @@ from datetime import date, datetime
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref, relationship
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Time
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Index, Integer, String, Time
 
 if 'db' not in locals() or 'db' not in globals():
     db = SQLAlchemy()
@@ -143,3 +143,19 @@ class WorkDayTask(db.Model):
 
 # TODO: add indexes on all foreign keys, create unique constraint on date column of workday/user,
 #  unique constraint on all name columns, add to get_name_column
+
+
+class Expense(db.Model, BaseModel):
+    expense_id = Column(Integer(), primary_key=True)
+    month = Column(Integer())  # index
+    year = Column(Integer())  # index
+    datetime = Column(DateTime(), nullable=False)
+    description = Column(String(), nullable=False)
+    category = Column(String(), nullable=False)  # index
+    subcategory = Column(String())  # index
+    vendor = Column(String())
+    amount = Column(Integer(), nullable=False)
+
+# FIXME: this doesn't work: sometimes expenses are exactly duplicated.
+# Index("uk_expense", Expense.datetime, Expense.description, Expense.amount, unique=True)
+# ? create a separate table for import status. Have month, year, and import_csv uses it?
