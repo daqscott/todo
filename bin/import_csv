@@ -2,10 +2,10 @@
 import re
 import os
 import sys
-
-from decimal import Decimal, getcontext
+from glob import glob
 from datetime import datetime
 from dataclasses import dataclass
+from decimal import Decimal, getcontext
 from dataclass_csv import DataclassReader
 
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -20,72 +20,169 @@ getcontext().prec = 2
 
 @dataclass
 class Info:
-    subcategory: str
-    vendor: str
+    category: str = "none"
+    subcategory: str = "none"
+    vendor: str = "none"
 
-
-# FIXME: make this a tuple of subcategory, vendor
-r_dict = {re.compile(r".+jason*", re.IGNORECASE): Info(vendor="jason", subcategory="psych"),
-          re.compile(r"amzn*"): Info(vendor="amazon", subcategory="amazon"),
-          re.compile(r"amazon*"): Info(vendor="amazon", subcategory="amazon"),
-          re.compile(r"kindle*"): Info(vendor="amazon", subcategory="books"),
-          re.compile(r"prime video*"): Info(vendor="amazon", subcategory="video"),
-          re.compile(r"wholefds"): Info(vendor="amazon", subcategory="amazon"),
-          re.compile(r"netflix"): Info(vendor="netflix", subcategory="video"),
-          re.compile(r"uber*"): Info(vendor="uber", subcategory="taxi"),
-          re.compile(r"phillip rocke*"): Info(subcategory="vape", vendor="gemini"),
-          re.compile(r"metrocard*"): Info(subcategory="metrocard", vendor="metrocard"),
-          re.compile(r".+grossman*"): Info(vendor="grossman", subcategory="psych"),
-          re.compile(r".dellapietras"): Info(subcategory="butcher", vendor="dellapietras"),
-          re.compile(r"sweetgreen*"): Info(vendor="sweetgreen", subcategory="lunch"),
-          re.compile(r"goldman*"): Info(vendor="GS", subcategory="lunch"),
-          re.compile(r"key*"): Info(vendor="key food", subcategory="food"),
-          re.compile(r"cvs*"): Info(vendor="cvs", subcategory="psych"),
-          re.compile(r"cleaners*"): Info(vendor="montague cleaners", subcategory="laundry"),
-          re.compile(r"starbucks"): Info(vendor="starbucks", subcategory="coffee")
-          }
 
 @dataclass
-class Row:
-    date: str
-    description: str
-    category: str
-    amount: Decimal
+class CreditCardRow:
+    Date: str = ""
+    Description: str = ""
+    Category: str = ""
+    Amount: Decimal = 0
 
 
-def read_file(file_name: str) -> None:
-    s = db.session
+@dataclass
+class CheckingRow:
+    Date: str = ""
+    Description: str = ""
+    Debit: Decimal = 0
+    Credit: Decimal = 0
+
+
+regex_dict = {
+    re.compile(r".+jason*", re.IGNORECASE): Info(vendor="jason", subcategory="psych"),
+    re.compile(r"amzn*"): Info(vendor="amazon", subcategory="amazon"),
+    re.compile(r"amazon*"): Info(vendor="amazon", subcategory="amazon"),
+    re.compile(r"kindle*"): Info(vendor="amazon", subcategory="books"),
+    re.compile(r"prime video*"): Info(vendor="amazon", subcategory="video"),
+    re.compile(r"wholefds"): Info(vendor="amazon", subcategory="amazon"),
+    re.compile(r"netflix"): Info(vendor="netflix", subcategory="video"),
+    re.compile(r"uber*"): Info(vendor="uber", subcategory="taxi"),
+    re.compile(r"phillip rocke*"): Info(subcategory="vape", vendor="gemini"),
+    re.compile(r"metrocard*"): Info(subcategory="metrocard", vendor="metrocard"),
+    re.compile(r".+grossman*"): Info(vendor="grossman", subcategory="psych"),
+    re.compile(r"dellapietras*"): Info(subcategory="butcher", vendor="dellapietras"),
+    re.compile(r"sweetgreen*"): Info(vendor="sweetgreen", subcategory="lunch"),
+    re.compile(r".+sachs*"): Info(vendor="GS", subcategory="lunch"),
+    re.compile(r".?key food.+"): Info(vendor="key food", subcategory="food"),
+    re.compile(r"matlyn*"): Info(vendor="key food", subcategory="food"),
+    re.compile(r"cvs*"): Info(vendor="cvs", subcategory="psych"),
+    re.compile(r"montague cleaners*"): Info(vendor="montague cleaners", subcategory="laundry"),
+    re.compile(r"starbucks"): Info(vendor="starbucks", subcategory="coffee"),
+    re.compile(r".+payroll"): Info(vendor="gs", category="income", subcategory="salary"),
+    re.compile(r".+carol vinson*"): Info(vendor="rent", category="rent", subcategory="rent"),
+    re.compile(r"mobile*"): Info(vendor="none", category="income", subcategory="deposit"),  # FIXME: doesn't work!
+    re.compile(r".+usaa american express"): Info(vendor="amanda", category="bills", subcategory="amanda"),
+    re.compile(r".+irs*"): Info(vendor="ny state", category="bills", subcategory="taxes"),
+    re.compile(r".+capitalone*"): Info(vendor="capitol one", category="savings", subcategory="savings"),
+    re.compile(r".+withdrawl*"): Info(vendor="cash", category="cash", subcategory="cash"),
+    re.compile(r".+paypal"): Info(vendor="paypal", category="bills", subcategory="special"),
+    re.compile(r".+apple\.com"): Info(vendor="apple", category="bills", subcategory="subscription"),
+    re.compile(r".+barbers*"): Info(vendor="barber", category="personal", subcategory="hair cut"),
+    re.compile(r".+fid bkg"): Info(vendor="fidelity", category="savings", subcategory="investment"),
+    re.compile(r".+chase credit crd*"): Info(vendor="chase credit card", category="bills", subcategory="payments"),
+    re.compile(r"zelle"): Info(vendor="zelle", category="bills", subcategory="special"),
+}
+
+
+clean_up_dict = {
+    re.compile(r"sachs*payroll"): "gs pay",
+    re.compile(r".+capitalone*"): "capital one"
+}
+
+
+def detect_file_type(file_name) -> str:
+    import csv
+    with open(file_name) as csv_file:
+        reader = csv.DictReader(csv_file)
+        if "Credit" in reader.fieldnames:
+            return parse_checking_row, "checking"
+        if "Amount" in reader.fieldnames:
+            return parse_credit_card_row, "credit_card"
+        raise ValueError("Can't determine file type")
+
+
+def read_csv_file(file_name: str) -> None:
     with open(file_name) as csv, app.app_context():
-        reader = DataclassReader(csv, Row)
+        not_found = set()
+        parse_func, file_type = detect_file_type(file_name)
+
+        if file_type == "credit_card":
+            reader = DataclassReader(csv, CreditCardRow)
+        elif file_type == "checking":
+            reader = DataclassReader(csv, CheckingRow)
+        else:
+            raise ValueError("No data file type detected")
+
         for row in reader:
-            dt = datetime.strptime(row.date, "%m/%d/%Y")
-            info = get_info(row.description.lower())
-            tmp = Expense(datetime=dt,
-                          month=dt.month,
-                          year=dt.year,
-                          description=row.description.lower(),
-                          category=row.category.lower(),
-                          subcategory=info.subcategory,
-                          vendor=info.vendor,
-                          amount=abs(round(row.amount))
-                          )
+            s = row.Description.strip().lower()
+            info = get_info(s)
+            if info.vendor == "none":
+                not_found.add(s)
+
+            tmp = parse_func(row)
+
+            # clean up data with clean_up_dict
+            for expression, clean_value in clean_up_dict.items():
+                if expression.match(tmp.description):
+                    tmp.description = clean_value.lower().strip()
+
             db.session.add(tmp)
         db.session.commit()
 
+        for i in not_found:
+            print(f"'{i}' not found")
+
+
+def parse_credit_card_row(row: CheckingRow) -> Info:
+    dt = datetime.strptime(row.Date, "%m/%d/%Y")
+    info = get_info(row.Description.lower())
+    if row.Amount > 0:
+        amount = row.Amount * -1
+    else:
+        amount = row.Amount
+    return Expense(datetime=dt,
+                  month=dt.month,
+                  year=dt.year,
+                  description=row.Description.lower().strip(),
+                  category=row.Category.lower().strip(),
+                  subcategory=info.subcategory,
+                  vendor=info.vendor,
+                  amount=round(amount)
+                  )
+
+
+def parse_checking_row(row: CreditCardRow) -> Info:
+    dt = datetime.strptime(row.Date, "%m-%d-%Y")
+    info = get_info(row.Description.lower())
+    if row.Debit:
+        amount = row.Debit * -1
+    else:
+        amount = row.Credit
+    return Expense(datetime=dt,
+                  month=dt.month,
+                  year=dt.year,
+                  description=row.Description.lower().strip(),
+                  category=info.category.lower().strip(),
+                  subcategory=info.subcategory.lower().strip(),
+                  vendor=info.vendor.lower().strip(),
+                  amount=round(amount)
+                  )
+
 
 def get_info(s: str) -> str:
-    # "uber", "sweetgreen", "vape", "metrocard", "jason", "grossman", "drugs", "butcher", "burger", "GS cafe", "laundry"
-    for expression, info in r_dict.items():
+    for expression, info in regex_dict.items():
         if expression.match(s):
-            print(f"Found it in {s}")
             return info
+
     return Info(subcategory="none", vendor="none")
 
 
 def main():
+    INPUT_PATTERN = "/Users/daqscott/Desktop/financial_info/*.csv"
     db.create_all(app=app)
-    file_name = sys.argv[1]
-    read_file(file_name)
+
+    if len(sys.argv) == 1:
+        print(f"Processing {INPUT_PATTERN}")
+        files = glob(INPUT_PATTERN)
+        print(files)
+    else:
+        files = [sys.argv[1]]
+
+    for f in files:
+        read_csv_file(f)
 
 
 if __name__ == "__main__":
